@@ -12,25 +12,35 @@ const port = process.env.PORT || 8000;
 
 const app = express();
 
-// middleware
+// ---------- CORS Middleware ----------
+const allowedOrigins = process.env.CLIENT_URL.split(",");
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL,
+    origin: function (origin, callback) {
+      // allow requests with no origin (like mobile apps, curl)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
+
+// ---------- Body Parsing Middleware ----------
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// error handler middleware
+// ---------- Error Handler Middleware ----------
 app.use(errorHandler);
 
-//routes
+// ---------- Routes ----------
 const routeFiles = fs.readdirSync("./src/routes");
 
 routeFiles.forEach((file) => {
-  // use dynamic import
   import(`./src/routes/${file}`)
     .then((route) => {
       app.use("/api/v1", route.default);
@@ -40,6 +50,7 @@ routeFiles.forEach((file) => {
     });
 });
 
+// ---------- Start Server ----------
 const server = async () => {
   try {
     await connect();
